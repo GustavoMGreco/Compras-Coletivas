@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CompraColetiva – Compras em Grupo</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+</head>
+<body>
+
+  <!-- ===================== AUTH SCREEN ===================== -->
+  <div id="auth-screen" class="screen active">
+    <div class="auth-bg"></div>
+    <div class="auth-card">
+      <div class="logo">🛍️ CompraColetiva</div>
+      <p class="tagline">Junte-se a outros compradores e garanta os melhores preços.</p>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('login', this)">Entrar</button>
+        <button class="tab" onclick="switchTab('register', this)">Cadastrar</button>
+      </div>
+
+      <div id="login-form">
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="login-email" placeholder="seu@email.com" />
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input type="password" id="login-pass" placeholder="••••••••" />
+        </div>
+        <p class="error-msg" id="login-error"></p>
+        <button type="button" class="btn-primary" onclick="login()">Entrar</button>
+      </div>
+
+      <div id="register-form" style="display:none">
+        <div class="field">
+          <label>Nome completo</label>
+          <input type="text" id="reg-name" placeholder="Seu nome" />
+        </div>
+        <div class="field">
+          <label>E-mail</label>
+          <input type="email" id="reg-email" placeholder="seu@email.com" />
+        </div>
+        <div class="field">
+          <label>Senha</label>
+          <input type="password" id="reg-pass" placeholder="Mínimo 6 caracteres" />
+        </div>
+        <p class="error-msg" id="reg-error"></p>
+        <button type="button" class="btn-primary" onclick="register()">Criar conta grátis</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== APP SCREEN ===================== -->
+  <div id="app-screen" class="screen">
+
+    <!-- Navbar com busca integrada -->
+    <nav class="navbar">
+      <div class="nav-logo">🛍️ CompraColetiva</div>
+
+      <div class="nav-search">
+        <span class="nav-search-icon">🔍</span>
+        <input type="text" id="search-input" placeholder="Buscar ofertas..." oninput="filterOffers()" />
+      </div>
+
+      <div class="nav-right">
+        <span id="nav-username"></span>
+        <button class="btn-ghost" onclick="logout()">Sair</button>
+      </div>
+    </nav>
+
+    <!-- Tabs de navegação -->
+    <div class="app-tabs">
+      <button class="app-tab active" onclick="showSection('offers')">Ofertas</button>
+      <button class="app-tab" onclick="showSection('create')">+ Criar Grupo</button>
+      <button class="app-tab" onclick="showSection('mygroups')">Meus Grupos</button>
+    </div>
+
+    <!-- ---- Ofertas ---- -->
+    <section id="section-offers" class="app-section active">
+      <div class="section-header">
+        <h2>Ofertas em Grupo</h2>
+        <p>Junte-se a outros compradores e garanta os melhores preços</p>
+      </div>
+      <div id="offers-grid" class="offers-grid"></div>
+    </section>
+
+    <!-- ---- Criar Grupo ---- -->
+    <section id="section-create" class="app-section">
+      <div class="section-header">
+        <h2>Criar Grupo de Compra</h2>
+        <p>Publique uma oferta e reúna compradores para conseguir desconto.</p>
+      </div>
+      <div class="form-card">
+        <div class="field">
+          <label>Nome do Produto</label>
+          <input type="text" id="c-name" placeholder="Ex: Tênis Nike Air Max 270" />
+        </div>
+        <div class="field">
+          <label>Descrição</label>
+          <input type="text" id="c-desc" placeholder="Breve descrição do produto" />
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Preço Original (R$)</label>
+            <input type="number" id="c-original" placeholder="250" min="1" />
+          </div>
+          <div class="field">
+            <label>Preço Coletivo (R$)</label>
+            <input type="number" id="c-price" placeholder="180" min="1" />
+          </div>
+        </div>
+        <div class="row-2">
+          <div class="field">
+            <label>Meta de Compradores</label>
+            <input type="number" id="c-goal" placeholder="10" min="2" />
+          </div>
+          <div class="field">
+            <label>Categoria</label>
+            <select id="c-category">
+              <option value="Tecnologia">Tecnologia</option>
+              <option value="Moda">Moda</option>
+              <option value="Alimentos">Alimentos</option>
+              <option value="Casa">Casa</option>
+              <option value="Esportes">Esportes</option>
+              <option value="Beleza">Beleza</option>
+            </select>
+          </div>
+        </div>
+        <p class="error-msg" id="create-error"></p>
+        <button class="btn-primary" onclick="createGroup()">🚀 Publicar Oferta</button>
+      </div>
+    </section>
+
+    <!-- ---- Meus Grupos ---- -->
+    <section id="section-mygroups" class="app-section">
+      <div class="section-header">
+        <h2>Meus Grupos</h2>
+        <p>Grupos que você criou ou está participando.</p>
+      </div>
+      <div id="mygroups-list" class="offers-grid"></div>
+    </section>
+
+  </div>
+
+  <!-- ===================== MODAL ===================== -->
+  <div id="modal-overlay" class="modal-overlay" onclick="closeModal()">
+    <div class="modal-card" onclick="event.stopPropagation()">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modal-content"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
