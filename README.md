@@ -21,10 +21,9 @@ Este projeto foi concebido com foco em entregar um Mínimo Produto Viável (MVP)
 ---
 
 ## Tecnologias Utilizadas
-* **Front-end:** React (via Vite) para componentização e gerenciamento de estado da interface.
-* **Estilização:** CSS puro ou Tailwind CSS (focado em responsividade).
-* **Back-end:** Node.js com Express para criação da API REST.
-* **Lógica e Integração:** JavaScript (ES6+).
+* **HTML5**
+* **CSS3**
+* **JavaScript**
 
 ---
 
@@ -65,54 +64,7 @@ O desenvolvimento está dividido em 3 Sprints focadas em garantir as entregas gr
 
 Para sustentar as funcionalidades acima, os seguintes blocos de lógica em JavaScript serão implementados:
 
-1.  **`calcularProgressoMeta(participantesAtuais, meta)`**: Função matemática no front-end para renderizar a porcentagem da barra de progresso.
-2.  **`filtrarOfertas(arrayOfertas, termoBusca)`**: Lógica usando `.filter()` e `.toLowerCase()` para o input de busca da Home.
-3.  **`atualizarStatusParticipacao(ofertaId)`**: Manipulação de estado (`useState` no React) para incrementar o número de usuários simulando a adesão.
-4.  **`validarFechamentoOferta(oferta)`**: Lógica (posteriormente movida para o Node) que compara `participantesAtuais >= meta` e altera o objeto da oferta, travando novos cliques.
-
----
-
-## Como Executar o Projeto
-
-1.  **Clone este repositório:**
-    ```bash
-    git clone [seu-link-do-github]
-    ```
-2.  **Executando o Back-end (Node):**
-    ```bash
-    cd backend
-    npm install
-    node server.js
-    ```
-    *O servidor iniciará na porta 3000.*
-
-3.  **Executando o Front-end (React):**
-    Em um novo terminal:
-    ```bash
-    cd frontend
-    npm install
-    npm run dev
-    ```
-    *Acesse o link local gerado pelo Vite (ex: localhost:5173).*
-
----
-
-## Estrutura do Projeto
-
-```text
-/
-├── backend/                # API em Node.js
-│   ├── server.js           # Servidor Express e rotas
-│   └── mockData.js         # Dados em memória (Ofertas)
-│
-├── frontend/               # Interface em React
-│   ├── src/
-│   │   ├── components/     # Cards, Header, Barra de Progresso
-│   │   ├── pages/          # Home (Lista) e DetalhesOferta
-│   │   ├── services/       # Integração com API (fetch/axios)
-│   │   ├── App.jsx         # Roteamento base
-│   │   └── main.jsx        
-│   ├── index.html          
-│   └── package.json        
-└── README.md
-```
+1.  **Cadastro e Login de usuário (com validações e sessão persistente)**: `register()`, `login()`.
+2.  **Criação de grupos de compra com preço, meta e categoria**: `createGroup()`.
+3.  **Participar / Sair de grupos com contador em tempo real**: `joinGroup()`, `leaveGroup()`.
+4.  **Listagem e busca de ofertas com filtro e progresso visual**: `renderOffers()`, `filterOffers()`.
