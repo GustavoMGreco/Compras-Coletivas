@@ -14,6 +14,56 @@ function saveUsers(u)   { localStorage.setItem('cj_users',   JSON.stringify(u));
 function saveGroups(g)  { localStorage.setItem('cj_groups',  JSON.stringify(g)); }
 function saveSession(s) { localStorage.setItem('cj_session', JSON.stringify(s)); }
 
+const API_BASE = 'http://localhost:3000';
+let useServer = false;
+
+async function syncFromServer() {
+  try {
+    const [gRes, uRes] = await Promise.all([
+      fetch(API_BASE + '/groups'),
+      fetch(API_BASE + '/users')
+    ]);
+    if (!gRes.ok || !uRes.ok) throw new Error('API error');
+    const groups = await gRes.json();
+    const users = await uRes.json();
+
+    // save users (map ids to strings)
+    const mappedUsers = users.data.map(u => ({ id: String(u.id), name: u.name, email: u.email, pass: '' }));
+    saveUsers(mappedUsers);
+
+    // for each group, fetch members to build members array
+    const groupsData = await Promise.all(groups.data.map(async g => {
+      const mgRes = await fetch(`${API_BASE}/groups/${g.id}/members`);
+      let members = [];
+      if (mgRes.ok) {
+        const mgJson = await mgRes.json();
+        members = mgJson.data.map(m => String(m.id));
+      } else {
+        // fallback: create placeholder member ids according to member_count
+        members = Array.from({ length: g.member_count || 0 }, (_, i) => 'srv' + i);
+      }
+      return {
+        id: String(g.id),
+        creatorId: String(g.creator_id),
+        name: g.name,
+        desc: g.description,
+        category: g.category,
+        originalPrice: Number(g.original_price),
+        price: Number(g.price),
+        goal: Number(g.goal),
+        members,
+        createdAt: new Date(g.created_at).getTime(),
+      };
+    }));
+    saveGroups(groupsData);
+    useServer = true;
+    return true;
+  } catch (e) {
+    useServer = false;
+    return false;
+  }
+}
+
 // emojis de placeholder por categoria
 const CATEGORY_EMOJI = {
   'Tecnologia': '💻', 'Moda': '👟', 'Alimentos': '🥗',
@@ -59,41 +109,91 @@ function switchTab(tab, btn) {
 }
 
 function register() {
-  const name  = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('reg-pass').value;
-  const errEl = document.getElementById('reg-error');
+  (async () => {
+    const name  = document.getElementById('reg-name').value.trim();
+    const email = document.getElementById('reg-email').value.trim().toLowerCase();
+    const pass  = document.getElementById('reg-pass').value;
+    const errEl = document.getElementById('reg-error');
 
-  if (!name || !email || !pass)         { errEl.textContent = 'Preencha todos os campos.'; return; }
-  if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { errEl.textContent = 'E-mail inválido.'; return; }
-  if (pass.length < 6)                  { errEl.textContent = 'Senha deve ter ao menos 6 caracteres.'; return; }
+    if (!name || !email || !pass)         { errEl.textContent = 'Preencha todos os campos.'; return; }
+    if (!/^[^@]+@[^@]+\.[^@]+$/.test(email)) { errEl.textContent = 'E-mail inválido.'; return; }
+    if (pass.length < 6)                  { errEl.textContent = 'Senha deve ter ao menos 6 caracteres.'; return; }
 
-  const users = getUsers();
-  if (users.find(u => u.email === email)) { errEl.textContent = 'E-mail já cadastrado.'; return; }
+    if (useServer) {
+      try {
+        const res = await fetch(API_BASE + '/users/register', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, password: pass })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Erro');
+        const user = json.data;
+        const sess = { id: String(user.id), name: user.name, email: user.email };
+        saveSession(sess);
+        // update local users list
+        const users = getUsers(); users.push({ id: sess.id, name: sess.name, email: sess.email, pass: '' }); saveUsers(users);
+        errEl.textContent = '';
+        toast('Conta criada com sucesso! 🎉', 'ok');
+        enterApp(sess);
+        return;
+      } catch (e) {
+        errEl.textContent = e.message || 'Erro no servidor.';
+        return;
+      }
+    }
 
-  const newUser = { id: uid(), name, email, pass };
-  users.push(newUser);
-  saveUsers(users);
-  saveSession(newUser);
-  errEl.textContent = '';
-  toast('Conta criada com sucesso! 🎉', 'ok');
-  enterApp(newUser);
+    // fallback local
+    const users = getUsers();
+    if (users.find(u => u.email === email)) { errEl.textContent = 'E-mail já cadastrado.'; return; }
+    const newUser = { id: uid(), name, email, pass };
+    users.push(newUser);
+    saveUsers(users);
+    saveSession(newUser);
+    errEl.textContent = '';
+    toast('Conta criada com sucesso! 🎉', 'ok');
+    enterApp(newUser);
+  })();
 }
 
 function login() {
-  const email = document.getElementById('login-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('login-pass').value;
-  const errEl = document.getElementById('login-error');
+  (async () => {
+    const email = document.getElementById('login-email').value.trim().toLowerCase();
+    const pass  = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
 
-  if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
+    if (!email || !pass) { errEl.textContent = 'Preencha e-mail e senha.'; return; }
 
-  const user = getUsers().find(u => u.email === email && u.pass === pass);
-  if (!user) { errEl.textContent = 'E-mail ou senha incorretos.'; return; }
+    if (useServer) {
+      try {
+        const res = await fetch(API_BASE + '/users/login', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password: pass })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'E-mail ou senha incorretos.');
+        const user = json.data || json;
+        const sess = { id: String(user.id), name: user.name, email: user.email };
+        saveSession(sess);
+        // ensure user in local list
+        const users = getUsers(); if (!users.find(u=>u.email===sess.email)) { users.push({ id: sess.id, name: sess.name, email: sess.email, pass: ''}); saveUsers(users); }
+        errEl.textContent = '';
+        toast('Login realizado com sucesso! 🎉', 'ok');
+        enterApp(sess);
+        return;
+      } catch (e) {
+        errEl.textContent = e.message || 'Erro no servidor.';
+        return;
+      }
+    }
 
-  saveSession(user);
-  errEl.textContent = '';
-  toast('Login realizado com sucesso! 🎉', 'ok');
-  enterApp(user);
+    const user = getUsers().find(u => u.email === email && u.pass === pass);
+    if (!user) { errEl.textContent = 'E-mail ou senha incorretos.'; return; }
+
+    saveSession(user);
+    errEl.textContent = '';
+    toast('Login realizado com sucesso! 🎉', 'ok');
+    enterApp(user);
+  })();
 }
 
 function logout() {
@@ -132,6 +232,29 @@ function createGroup() {
   if (price >= original)       { errEl.textContent = 'Preço coletivo deve ser menor que o original.'; return; }
   if (goal < 2)                { errEl.textContent = 'Meta deve ter ao menos 2 compradores.'; return; }
 
+  if (useServer) {
+    (async () => {
+      try {
+        const res = await fetch(API_BASE + '/groups', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ creator_id: Number(session.id), name, description: desc, category, original_price: original, price, goal })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Erro ao criar grupo');
+        // refresh from server
+        await syncFromServer();
+        errEl.textContent = '';
+        toast('Oferta publicada! 🚀', 'ok');
+        showSection('offers');
+        renderOffers();
+      } catch (e) {
+        errEl.textContent = e.message || 'Erro no servidor.';
+      }
+    })();
+    ['c-name','c-desc','c-original','c-price','c-goal'].forEach(id => document.getElementById(id).value = '');
+    return;
+  }
+
   const group = { id: uid(), creatorId: session.id, name, desc, category,
     originalPrice: original, price, goal, members: [session.id], createdAt: Date.now() };
 
@@ -156,6 +279,27 @@ function joinGroup(groupId) {
   const group = groups[idx];
   if (group.members.includes(session.id)) { toast('Você já participa deste grupo.', 'err'); return; }
   if (group.members.length >= group.goal) { toast('Grupo já atingiu a meta!', 'err'); return; }
+
+  if (useServer) {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/groups/${groupId}/members`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ user_id: Number(session.id) })
+        });
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error || 'Erro ao entrar no grupo');
+        await syncFromServer();
+        toast('Você entrou no grupo! 🛒', 'ok');
+        renderOffers();
+        closeModal();
+      } catch (e) {
+        toast(e.message || 'Erro no servidor', 'err');
+      }
+    })();
+    return;
+  }
+
   group.members.push(session.id);
   saveGroups(groups);
   toast('Você entrou no grupo! 🛒', 'ok');
@@ -170,6 +314,24 @@ function leaveGroup(groupId) {
   if (idx === -1) return;
   const group = groups[idx];
   if (group.creatorId === session.id) { toast('O criador não pode sair do grupo.', 'err'); return; }
+
+  if (useServer) {
+    (async () => {
+      try {
+        const res = await fetch(`${API_BASE}/groups/${groupId}/members/${Number(session.id)}`, { method: 'DELETE' });
+        const json = await res.json().catch(()=>({}));
+        if (!res.ok) throw new Error(json.error || 'Erro ao sair do grupo');
+        await syncFromServer();
+        toast('Você saiu do grupo.');
+        renderOffers();
+        closeModal();
+      } catch (e) {
+        toast(e.message || 'Erro no servidor', 'err');
+      }
+    })();
+    return;
+  }
+
   group.members = group.members.filter(m => m !== session.id);
   saveGroups(groups);
   toast('Você saiu do grupo.');
@@ -345,8 +507,9 @@ function toast(msg, type = '') {
 }
 
 // init
-(function init() {
-  seedGroups();
+(async function init() {
+  const ok = await syncFromServer();
+  if (!ok) seedGroups();
   const session = getSession();
   if (session) enterApp(session);
 })();
