@@ -24,6 +24,7 @@ Este projeto foi concebido com foco em entregar um Mínimo Produto Viável (MVP)
 * **HTML5**
 * **CSS3**
 * **JavaScript**
+* **MySQL**
 
 ---
 
@@ -68,3 +69,34 @@ Para sustentar as funcionalidades acima, os seguintes blocos de lógica em JavaS
 2.  **Criação de grupos de compra com preço, meta e categoria**: `createGroup()`.
 3.  **Participar / Sair de grupos com contador em tempo real**: `joinGroup()`, `leaveGroup()`.
 4.  **Listagem e busca de ofertas com filtro e progresso visual**: `renderOffers()`, `filterOffers()`.
+`
+## Configurar o banco MySQL
+ 
+---
+ 
+### Usuários
+ 
+| Método | Rota | Body (JSON) | Descrição |
+|--------|------|-------------|-----------|
+| `GET` | `/users` | — | Lista todos os usuários |
+| `POST` | `/users/register` | `{ "name": "João Silva", "email": "joao@email.com", "password": "123456" }` | Cadastra usuário |
+| `POST` | `/users/login` | `{ "email": "joao@email.com", "password": "123456" }` | Login |
+ 
+---
+ 
+### Grupos de Compra
+ 
+| Método | Rota | Body (JSON) | Descrição |
+|--------|------|-------------|-----------|
+| `GET` | `/groups` | — | Lista todas as ofertas |
+| `POST` | `/groups` | `{ "creator_id": 1, "name": "Tênis Nike", "description": "Tamanhos 38-44", "category": "Moda", "original_price": 699, "price": 459, "goal": 15 }` | Cria grupo |
+ 
+---
+ 
+### Participar / Sair de Grupos
+ 
+| Método | Rota | Body (JSON) | Descrição |
+|--------|------|-------------|-----------|
+| `GET` | `/groups/1/members` | — | Lista membros do grupo |
+| `POST` | `/groups/1/members` | `{ "user_id": 2 }` | Entrar no grupo |
+| `DELETE` | `/groups/1/members/2` | — | Sair do grupo |
