@@ -71,31 +71,6 @@ app.post('/users/login', async (req, res) => {
   ok(res, rows[0]);
 });
 
-// PUT /users/:id  – atualiza nome ou senha
-app.put('/users/:id', async (req, res) => {
-  const { name, password } = req.body;
-  if (!name && !password) return err(res, 'Informe name ou password para atualizar.');
-
-  const fields = [];
-  const values = [];
-  if (name)     { fields.push('nome = ?');     values.push(name); }
-  if (password) { fields.push('senha = ?'); values.push(password); }
-  values.push(req.params.id);
-
-  const [result] = await pool.query(
-    `UPDATE usuarios SET ${fields.join(', ')} WHERE id = ?`, values
-  );
-  if (!result.affectedRows) return err(res, 'Usuário não encontrado.', 404);
-  ok(res, { updated: true });
-});
-
-// DELETE /users/:id  – remove usuário
-app.delete('/users/:id', async (req, res) => {
-  const [result] = await pool.query('DELETE FROM usuarios WHERE id = ?', [req.params.id]);
-  if (!result.affectedRows) return err(res, 'Usuário não encontrado.', 404);
-  ok(res, { deleted: true });
-});
-
 
 // 2. GRUPOS DE COMPRA  (CRUD completo)
 
@@ -121,29 +96,6 @@ app.get('/groups', async (req, res) => {
   ok(res, rows);
 });
 
-// GET /groups/:id  – detalhes de um grupo
-app.get('/groups/:id', async (req, res) => {
-  const [rows] = await pool.query(`
-    SELECT g.id,
-           g.criador_id AS creator_id,
-           g.nome        AS name,
-           g.descricao   AS description,
-           g.categoria   AS category,
-           g.preco_original AS original_price,
-           g.preco       AS price,
-           g.objetivo    AS goal,
-           g.data_expira AS expires_at,
-           g.data_criacao AS created_at,
-           COUNT(mg.usuario_id) AS member_count
-    FROM grupos g
-    LEFT JOIN membros_grupo mg ON mg.grupo_id = g.id
-    WHERE g.id = ?
-    GROUP BY g.id
-  `, [req.params.id]);
-  if (!rows.length) return err(res, 'Grupo não encontrado.', 404);
-  ok(res, rows[0]);
-});
-
 // POST /groups  – cria novo grupo (US07 / createGroup)
 app.post('/groups', async (req, res) => {
   const { creator_id, name, description, category,
@@ -167,33 +119,6 @@ app.post('/groups', async (req, res) => {
     [result.insertId, creator_id]
   );
   ok(res, { id: result.insertId }, 201);
-});
-
-// PUT /groups/:id  – edita nome/descrição/preços/meta
-app.put('/groups/:id', async (req, res) => {
-  const { name, description, category, original_price, price, goal } = req.body;
-  const fields = []; const values = [];
-  if (name)           { fields.push('nome = ?');           values.push(name); }
-  if (description)    { fields.push('descricao = ?');      values.push(description); }
-  if (category)       { fields.push('categoria = ?');      values.push(category); }
-  if (original_price) { fields.push('preco_original = ?'); values.push(original_price); }
-  if (price)          { fields.push('preco = ?');          values.push(price); }
-  if (goal)           { fields.push('objetivo = ?');        values.push(goal); }
-  if (!fields.length) return err(res, 'Nenhum campo para atualizar.');
-  values.push(req.params.id);
-
-  const [result] = await pool.query(
-    `UPDATE grupos SET ${fields.join(', ')} WHERE id = ?`, values
-  );
-  if (!result.affectedRows) return err(res, 'Grupo não encontrado.', 404);
-  ok(res, { updated: true });
-});
-
-// DELETE /groups/:id  – remove grupo
-app.delete('/groups/:id', async (req, res) => {
-  const [result] = await pool.query('DELETE FROM grupos WHERE id = ?', [req.params.id]);
-  if (!result.affectedRows) return err(res, 'Grupo não encontrado.', 404);
-  ok(res, { deleted: true });
 });
 
 
@@ -259,43 +184,6 @@ app.delete('/groups/:id/members/:userId', async (req, res) => {
   );
   if (!result.affectedRows) return err(res, 'Membro não encontrado.', 404);
   ok(res, { left: true });
-});
-
-
-// 4. BUSCA / FILTRO DE OFERTAS  (renderOffers / filterOffers)
-
-// GET /users/:id/memberships  – grupos que o usuário participa (para marcar "Participando")
-app.get('/users/:id/memberships', async (req, res) => {
-  const [rows] = await pool.query(
-    'SELECT grupo_id AS group_id FROM membros_grupo WHERE usuario_id = ?', [req.params.id]
-  );
-  ok(res, rows);
-});
-
-// GET /search?q=termo  – busca por nome, categoria ou descrição
-app.get('/search', async (req, res) => {
-  const q = `%${req.query.q || ''}%`;
-  const [rows] = await pool.query(`
-    SELECT g.id,
-           g.criador_id AS creator_id,
-           g.nome        AS name,
-           g.descricao   AS description,
-           g.categoria   AS category,
-           g.preco_original AS original_price,
-           g.preco       AS price,
-           g.objetivo    AS goal,
-           g.data_expira AS expires_at,
-           g.data_criacao AS created_at,
-           COUNT(mg.usuario_id) AS member_count
-    FROM grupos g
-    LEFT JOIN membros_grupo mg ON mg.grupo_id = g.id
-    WHERE g.nome        LIKE ?
-       OR g.categoria   LIKE ?
-       OR g.descricao   LIKE ?
-    GROUP BY g.id
-    ORDER BY g.data_criacao DESC
-  `, [q, q, q]);
-  ok(res, rows);
 });
 
 // start
